@@ -15,6 +15,9 @@ class Notation(Enum):
         PLAYER1 (int): Represents a cell occupied by Player 1.
         PLAYER2 (int): Represents a cell occupied by Player 2.
     """
+    EMPTY = 0  
+    PLAYER1 = 1  
+    PLAYER2 = 2  
 
 class Player:
     """Represents a player in the game.
@@ -30,28 +33,30 @@ class Player:
         curScore (int): The initial score of the player.
     """
 
-    def __init__(self, playerName, playerNotation, curScore):
-        pass
+    def __init__(self, playerName: str, playerNotation: Notation, curScore: int):
+        self.__playerName = playerName
+        self.__playerNotation = playerNotation
+        self.__curScore = curScore
 
     def display(self) -> str:
-        """Displays the player's details including name, notation, and current score."""
-        pass
+        return f"Player: {self.__playerName}, Score: {self.__curScore}, Notation: {self.__playerNotation.name}"
+
 
     def addScoreByOne(self):
         """Increments the player's score by one."""
-        pass
+        self.__curScore += 1
 
     def getScore(self):
         """Returns the current score of the player."""
-        pass
+        return self.__curScore
 
     def getName(self):
         """Returns the name of the player."""
-        pass
+        return self.__playerName
 
     def getNotation(self):
         """Returns the notation used by the player."""
-        pass
+        return self.__playerNotation
 
 class Board:
     """Represents the game board.
@@ -66,18 +71,20 @@ class Board:
         colNum (int): Number of columns in the board.
     """
 
-    def __init__(self, rowNum, colNum) -> None:
-        pass
+    def __init__(self, rowNum: int, colNum: int):
+        self.__rowNum = rowNum
+        self.__colNum = colNum
+        self.__grid = [[Notation.EMPTY for _ in range(colNum)] for _ in range(rowNum)]
 
     def initGrid(self):
         """Initializes the game board with empty cells."""
-        pass
+        self.__grid = [[Notation.EMPTY for _ in range(self.__colNum)] for _ in range(self.__rowNum)]
 
     def getColNum(self):
         """Returns the number of columns in the board."""
-        pass
+        return self.__colNum
 
-    def placeMark(self, colNum, mark):
+    def placeMark(self, colNum: int, mark: Notation) -> bool:
         """Attempts to place a mark on the board at the specified column.
 
         Args:
@@ -87,35 +94,68 @@ class Board:
         Returns:
             bool: True if the mark was successfully placed, False otherwise.
         """
-        pass
+        if colNum < 0 or colNum >= self.__colNum or mark == Notation.EMPTY:
+            print("Error: Invalid column number or marker")
+            return False
+        for row in reversed(self.__grid):
+            if row[colNum] == Notation.EMPTY:
+                row[colNum] = mark
+                return True
+        print("Column is full")
+        return False
 
-    def checkFull(self):
+    def checkFull(self) -> bool:
         """Checks if the board is completely filled.
 
         Returns:
             bool: True if the board is full, False otherwise.
         """
-        pass
+        return all(cell != Notation.EMPTY for row in self.__grid for cell in row)
 
     def display(self):
         """Displays the current state of the board."""
-        pass
+        boardStr = "Current Board is:\n"
+        for row in self.__grid:
+            for cell in row:
+                boardStr += 'O' if cell == Notation.EMPTY else ('R' if cell == Notation.PLAYER1 else 'Y')
+            boardStr += '\n'
+        print(boardStr)
 
     # Private methods for internal use
     def __checkWinHorizontal(self, target):
-        pass
+        for row in self.__grid:
+            for col in range(self.__colNum - target + 1):
+                if all(row[col + i] == row[col] != Notation.EMPTY for i in range(target)):
+                    return row[col]
+        return None
 
     def __checkWinVertical(self, target):
-        pass
+        for col in range(self.__colNum):
+            for row in range(self.__rowNum - target + 1):
+                if all(self.__grid[row + i][col] == self.__grid[row][col] != Notation.EMPTY for i in range(target)):
+                    return self.__grid[row][col]
+        return None
 
     def __checkWinOneDiag(self, target, rowNum, colNum):
-        pass
+        for row in range(self.__rowNum - target + 1):
+            for col in range(self.__colNum - target + 1):
+                if all(self.__grid[row + i][col + i] == self.__grid[row][col] != Notation.EMPTY for i in range(target)):
+                    return self.__grid[row][col]
+                if all(self.__grid[row + target - 1 - i][col + i] == self.__grid[row + target - 1][col] != Notation.EMPTY for i in range(target)):
+                    return self.__grid[row + target - 1][col]
+        return None
 
     def __checkWinAntiOneDiag(self, target, rowNum, colNum):
-        pass
+        for row in range(self.__rowNum - 1, target - 2, -1):
+            for col in range(self.__colNum - target + 1):
+                if all(self.__grid[row - i][col + i] == self.__grid[row][col] != Notation.EMPTY for i in range(target)):
+                    return self.__grid[row][col]
+                if all(self.__grid[row - target + 1 + i][col + i] == self.__grid[row - target + 1][col] != Notation.EMPTY for i in range(target)):
+                    return self.__grid[row - target + 1][col]
+        return None
 
     def __checkWinDiagonal(self, target):
-        pass
+        return self.__checkWinOneDiag(target, self.__rowNum, self.__colNum) or self.__checkWinAntiOneDiag(target, self.__rowNum, self.__colNum)
 
     def checkWin(self, target):
         """Checks if there is a winning condition on the board.
@@ -126,7 +166,7 @@ class Board:
         Returns:
             Notation or None: The notation of the winning player, or None if there is no winner.
         """
-        pass
+        return self.__checkWinHorizontal(target) or self.__checkWinVertical(target) or self.__checkWinDiagonal(target)
 
 class Game:
     """Represents the game logic and flow.
@@ -141,7 +181,12 @@ class Game:
     """
 
     def __init__(self, rowNum, colNum, connectN, targetScore, playerName1, playerName2) -> None:
-        pass
+        self.__board = Board(rowNum, colNum)  # Initialize the game board
+        self.__connectN = connectN  # Number of consecutive marks needed for a win
+        self.__targetScore = targetScore  # Score needed to win the game
+        # Initialize the players
+        self.__playerList = [Player(playerName1, Notation.PLAYER1, 0), Player(playerName2, Notation.PLAYER2, 0)]
+        self.__curPlayer = self.__playerList[0]
 
     def __playBoard(self, curPlayer):
         """Handles the process of a player making a move on the board.
@@ -149,19 +194,50 @@ class Game:
         Args:
             curPlayer (Player): The current player who is making the move.
         """
-        pass
+        isPlaced = False
+        while not isPlaced:
+            try:
+                colNum = int(input(f"{curPlayer.getName()}, enter column number to place your mark: "))
+                if colNum < 0 or colNum >= self.__board.getColNum():
+                    raise ValueError
+                isPlaced = self.__board.placeMark(colNum, curPlayer.getNotation())
+            except ValueError:
+                print("Invalid input. Please enter a valid column number.")
 
     def __changeTurn(self):
         """Switches the turn to the other player."""
-        pass
+        self.__curPlayer = self.__playerList[1] if self.__curPlayer == self.__playerList[0] else self.__playerList[0]
 
     def playRound(self):
         """Plays a single round of the game."""
-        pass
+        curWinnerNotation = None
+        self.__board.initGrid()
+        self.__curPlayer = self.__playerList[0]
+        print("Starting a new round")
+
+        while not curWinnerNotation and not self.__board.checkFull():
+            self.__curPlayer.display()
+            self.__board.display()
+            self.__playBoard(self.__curPlayer)
+            curWinnerNotation = self.__board.checkWin(self.__connectN)
+            if curWinnerNotation:
+                print(f"Winner: {self.__curPlayer.getName()}")
+                self.__board.display()
+                self.__curPlayer.addScoreByOne()
+                break
+            elif self.__board.checkFull():
+                print("Board is full. No winner for this round.")
+                break
+            self.__changeTurn()
 
     def play(self):
         """Starts and manages the game play until a player wins."""
-        pass
+        while all(player.getScore() < self.__targetScore for player in self.__playerList):
+            self.playRound()
+
+        print("Game Over")
+        for player in self.__playerList:
+            print(player.display())
 
 def main():
     """Main function to start the game."""
